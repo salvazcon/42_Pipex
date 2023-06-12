@@ -11,7 +11,10 @@
 # **************************************************************************** #
 
 NAME	= pipex
-SRCS	= pipex.c
+SRCS	= pipex.c \
+			pipex_aux.c \
+			pipex_split.c \
+			pipex_utils.c
 OBJS	= ${SRCS:.c=.o}
 CC		= gcc
 CFLAGS	= -g -Wall -Wextra -Werror

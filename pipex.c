@@ -12,97 +12,87 @@
 
 #include "pipex.h"
 
-int	ft_open_file(char *argc, int flags)
+void	ft_cmd(struct s_var *v, char *cmd, char **envp)
 {
-	int fd;
+	int		i;
 
-	fd = open(argc, flags, 0644);
-	if(fd < 0)
+	v->path = ft_split(ft_path(envp), ':');
+	if (!v->path)
+		ft_error(v, "Error: Path not found:", 1);
+	v->exec = ft_split(cmd, ' ');
+	i = -1;
+	while (v->path[++i])
 	{
-		perror(argc);
-		exit(1);
-		//close(fd[0]); Cierra todo.
+		v->bin = ft_strjoin(v->path[i], "/");
+		v->bin = ft_strjoin(v->bin, v->exec[0]);
+		if (access(v->bin, F_OK) == 0)
+			break ;
+		v->bin = NULL;
 	}
-	return (fd);
+	if (!v->bin)
+		ft_error(v, "Error: Command not found:", 127);
+	if (execve(v->bin, v->exec, envp) == -1)
+		ft_error(v, v->bin, 1);
 }
 
-void	ft_pipex(int *fd, char **argv, char **envp)
+void	ft_first_son(struct s_var *v, char *cmd, char **envp)
 {
-	int		pipex[2];
-	pid_t	ps1_id;
-	pid_t	ps2_id;
-
-	if (pipe(pipex) == -1)
-		exit(1);
-	ps1_id = fork();
-	if (ps1_id == -1)
-		exit(1);
-	else if (ps1_id == 0)
-	{
-		close(pipex[0]);
-		dup2(fd[1], STDIN_FILENO);
-		dup2(pipex[1], STDOUT_FILENO);
-		close(pipex[1]);
-		//exec(argv[2], envp);
-	}
-	else
-	{
-		ps2_id = fork();
-		if (ps2_id == -1)
-			exit(1);
-		else if (ps2_id == 0)
-		{
-			close(pipex[1]);
-			dup2(pipex[0], STDIN_FILENO);
-			dup2(fd[0], STDOUT_FILENO);
-			close(pipex[0]);
-			//exec(argv[3], envp);
-		}
-		else
-		{
-			close_fds(pipex);
-			waitpid(ps1_id, NULL, 0);
-			waitpid(ps2_id, NULL, 0);
-		}
-	}
+	close(v->pipex[0]);
+	dup2(v->fd[0], STDIN_FILENO);
+	dup2(v->pipex[1], STDOUT_FILENO);
+	close(v->pipex[1]);
+	ft_cmd(v, cmd, envp);
 }
 
-int main(int argc, char **argv, char **envp)
+void	ft_last_son(struct s_var *v, char *cmd, char **envp)
 {
-	int	fd[2];
+	close(v->pipex[1]);
+	dup2(v->pipex[0], STDIN_FILENO);
+	dup2(v->fd[1], STDOUT_FILENO);
+	close(v->pipex[0]);
+	ft_cmd(v, cmd, envp);
+}
 
-	if (argc == 5)
+void	ft_pipex(struct s_var *v, char **cmd, char **envp)
+{
+	if (pipe(v->pipex) == -1)
+		ft_error(v, "Error: Pipe Error:", 1);
+	v->ps1_id = fork();
+	if (v->ps1_id == -1)
+		ft_error(v, "Error: Fork Error:", 1);
+	else if (v->ps1_id == 0)
+		ft_first_son(v, cmd[2], envp);
+	v->ps2_id = fork();
+	if (v->ps2_id == -1)
+		ft_error(v, "Error: Fork Error:", 1);
+	else if (v->ps2_id == 0)
+		ft_last_son(v, cmd[3], envp);
+	close(v->pipex[0]);
+	close(v->pipex[1]);
+	waitpid(v->ps1_id, NULL, 0);
+	waitpid(v->ps2_id, NULL, 0);
+}
+
+int	main(int argc, char **argv, char **envp)
+{
+	struct s_var	*v;
+
+	v = ft_calloc(sizeof(struct s_var), 1);
+	if (!v)
 		return (0);
-	fd[0] = ft_open_file(argv[1], O_RDONLY);
-	fd[1] = ft_open_file(argv[argc - 1], O_RDWR | O_CREAT | O_TRUNC);
-	ft_pipex(fd, argv, envp);
-	//system("leaks pipex");
+	if (argc == 5)
+		ft_error(v, "Error: Invalid arguments.", 1);
+	v->fd[0] = ft_open_file(v, argv[1], O_RDONLY);
+	v->fd[1] = ft_open_file(v, argv[argc - 1], O_CREAT | O_RDWR | O_TRUNC);
+	ft_pipex(v, argv, envp);
+	ft_free_all(v);
 	return (0);
 }
 
 /*
-* Preguntas:
-	- Que es 'env' en los args? Se debe a que en este punetero
-	doble guarda todo el comando env completo 
-	- Cada fork se debe porque al usar el comando exeve
-	se cierra el programa y no deseamos cerra el programa principal.
-	- Devo saber como enfocar el dup2.
-* Controles de errorers:
-	- Los argumentos que nos pasan.
-	- Los archivos abiertos.
-	- Los procesos en ejecucion.
-	- Diferentes tipos de errores: 128, perror, stdio...
-* Comandos nuevos:
-	Control de errores sobre los permisos del archivo con access();
-	Ejecutar el comando con: execve();
-		char *args[3];
-
-		args[0] = "ls";
-		args[1] = "-l";
-		args[2] = NULL;
-		execve("/bin/ls", args, NULL);
-		printf("This line will not be executed.\n");
-	wait - espera a que termine un proceso hijo
-	sleep - mata los precosos.
-	Eliminar archivos temporales:  unlink();
+//ft_putstr_fd("Error: Invalid arguments.\n", 2);
+- El organizar el tema de la memroia en el ft_cmd
+- Aclarar el tema de Exec del ft_cmd
+- Optimizar las funciones dedicadas a iniciar porcesos...
+- La mayoria de problemas son unicamente de este archivo.
 */
