@@ -6,7 +6,7 @@
 /*   By: saazcon- <saazcon-@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2023/06/05 16:55:17 by saazcon-          #+#    #+#             */
-/*   Updated: 2023/06/07 00:16:22 by saazcon-         ###   ########.fr       */
+/*   Updated: 2023/06/13 20:07:00 by saazcon-         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -22,14 +22,6 @@ int	ft_strlen(char *str)
 	while (str[i])
 		i++;
 	return (i);
-}
-
-void	ft_putstr_fd(char *s, int fd)
-{
-	if (!s)
-		return ;
-	if (*s)
-		write(fd, &*s, ft_strlen(s));
 }
 
 void	*ft_calloc(size_t count, size_t size)

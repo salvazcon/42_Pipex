@@ -19,7 +19,6 @@
 # include <stdlib.h>
 # include <limits.h>
 # include <fcntl.h>
-# include <errno.h> //errno
 # include <sys/wait.h> //wait
 
 struct	s_var{
@@ -40,7 +39,6 @@ char	*ft_strjoin(char *stash, char *buff);
 char	*ft_path(char **env);
 char	**ft_split(char *s, char c);
 void	*ft_calloc(size_t count, size_t size);
-void	ft_putstr_fd(char *s, int fd);
 void	ft_close(struct s_var *v);
 void	ft_free_all(struct s_var *v);
 void	ft_error(struct s_var *v, char *error, int num);
